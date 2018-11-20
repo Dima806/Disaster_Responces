@@ -5,20 +5,18 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 
-def make_etl(messages_str, categories_str, database_str):
+def extract(messages_str, categories_str):
     '''
-    Extract-Transform-Load procedure for disaster messages and message categories
+    Extracts raw CSV data, prints shapes of corresponding dataframes and returns them.
     
     Args:
-        messages_str (string): a path to messages.csv file
-        categories_str (string): a path to categories.csv file
-        database_str (string): a path to final cleaned database
+        messages_str (string) - a path to messages.csv file
+        categories_str (string) - a path to categories.csv file
 
     Returns:
-        None    
-    
+        messages (pandas dataframe) - dataframe with messages
+        categories (pandas dataframe) - dataframe with categories
     '''
-
     # load messages dataset
     messages = pd.read_csv(messages_str)
     print('>>> messages shape: ', messages.shape)
@@ -27,6 +25,18 @@ def make_etl(messages_str, categories_str, database_str):
     categories = pd.read_csv(categories_str)
     print('>>> categories shape: ', categories.shape)
 
+    return messages, categories
+
+def transform(messages, categories):
+    '''
+    Merges and transforms extracted data (messages and categories).
+    
+    Args:
+        messages (pandas dataframe) - dataframe with messages
+        categories (pandas dataframe) - dataframe with categories        
+    Returns:
+        all_df (pandas dataframe) - transformed dataframe
+    '''
     # merge datasets
     all_df = messages.merge(categories, how='outer', on='id')
     print('>>> all_df shape: ', all_df.shape)
@@ -78,13 +88,44 @@ def make_etl(messages_str, categories_str, database_str):
 
     # print the final shape
     print('>>> all_df shape: ', all_df.shape)
+    
+    return all_df
 
+def load(all_df, database_str):
+    '''
+    Loads trasnformed data back to database.
+    
+    Args:
+        all_df (pandas dataframe) - transformed dataframe
+        database_str (string) - a path to final cleaned database
+    Returns:
+        None
+    '''
+    
     engine = create_engine('sqlite:///'+database_str)
     all_df.to_sql('DisasterMessagesDatabase', engine, index=False, if_exists='replace')
+
+def make_etl(messages_str, categories_str, database_str):
+    '''
+    Extract-Transform-Load procedure for disaster messages and message categories.
+    
+    Args:
+        messages_str (string) - a path to messages.csv file
+        categories_str (string) - a path to categories.csv file
+        database_str (string) - a path to final cleaned database
+
+    Returns:
+        None    
+    '''
+    
+    messages, categories = extract(messages_str, categories_str)
+    
+    all_df = transform(messages, categories)
+    
+    load(all_df, database_str)
     
     print('>>> DONE')
     
-    return all_df
 
 if __name__ == '__main__':
     messages_str, categories_str, database_str = sys.argv[1:]
