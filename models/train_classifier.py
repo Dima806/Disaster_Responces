@@ -37,6 +37,19 @@ import warnings
 warnings.filterwarnings("ignore")
 
 def load_data(database_filepath):
+    '''
+    Loads data from the cleaned database, tokenizes them, 
+    builds machine learning model (with parameters found in RandomizedSearchCV),
+    evaluates it and saves it as pickle file.
+    
+    Args:
+        database_filepath (string) - path to database 
+        
+    Returns:
+        X (numpy array) - array of data (without target variables)
+        y (numpy array) - array of target variables
+        category_names (list of strings) - full list of category names
+    '''
     engine = create_engine('sqlite:///'+database_filepath)
     df = pd.read_sql_table('DisasterMessagesDatabase', engine)
     X = df.message.values
@@ -48,7 +61,15 @@ STOPLIST = set(stopwords.words('english') + list(ENGLISH_STOP_WORDS))
 SYMBOLS = " ".join(string.punctuation).split(" ") + ["-", "...", "”", "”"]
 
 def tokenize(text):
-
+    '''
+    Tokenizes text, lemmatizes obtained list of tokens and cleans it from stoplist and symbols
+    
+    Args:
+        text (string): text to tokenize
+    
+    Returns:
+        clean_tokens (list): list of cleaned tokens
+    '''
     tokens = TweetTokenizer().tokenize(text.lower())
     lemmatizer = WordNetLemmatizer()
     clean_tokens = [lemmatizer.lemmatize(tok).strip() for tok in tokens]
@@ -59,7 +80,15 @@ def tokenize(text):
 
 
 def build_model():
+    '''
+    Builds machine learning model (with parameters previously found in RandomizedSearchCV) 
     
+    Args:
+        None
+    
+    Returns:
+        model - machine learning pipeline 
+    '''
     model = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize, 
                                  stop_words='english', 
@@ -74,18 +103,51 @@ def build_model():
     return model
 
 def evaluate_model(model, X_test, y_test, category_names):
-
+    '''
+    Prints classification report for a given list of category_names
+    using a given model evaluated on test dataset (X_test, y_test).
+    
+    Args:
+        model - machine learning pipeline
+        X_test (numpy array) - array of test data (without target variables)
+        y_test (numpy array) - array of test target variables
+        category_names (list of strings) - list of category names consistent with y_test
+    
+    Returns:
+        None
+    '''
     y_test_pred = model.predict(X_test)
     for i, item in enumerate(category_names):
         print('>>>', item)
         print(classification_report(y_test[:,i], y_test_pred[:,i]))
 
 def save_model(model, model_filepath):
+    '''
+    Saves the selected model in pickle.
+    
+    Args:
+        model - machine learning pipeline
+        model_filepath (string) - path to save the model
+    
+    Returns:
+        None
+    '''
     
     pickle.dump(model, open(model_filepath, 'wb'))
 
 
 def main():
+    '''
+    Runs the abovementioned procedures in a pipeline 
+    (build_model -> model.fit -> evaluate_model -> save_model).
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    '''
+    
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
